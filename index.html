@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stick Brawl</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bungee&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root { --bg: #07060f; --panel: rgba(14, 12, 30, 0.86); --line: rgba(255, 255, 255, 0.12); --txt: #eef; --dim: #9a9cb8; --acc: #ff2bd6; --acc2: #3ad7ff; --gold: #ffe14d; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--txt); font-family: Rajdhani, system-ui, sans-serif; user-select: none; }
+  canvas#game { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; cursor: crosshair; }
+  #menu { position: fixed; inset: 0; display: grid; place-items: center; background: radial-gradient(ellipse at center, rgba(7,6,15,0.35), rgba(7,6,15,0.85)); backdrop-filter: blur(2px); overflow-y: auto; padding: 16px; }
+  #menu.hidden { display: none; }
+  .screen { display: none; width: min(1100px, 100%); animation: pop .35s cubic-bezier(.2,1.4,.4,1); }
+  .screen.active { display: block; }
+  @keyframes pop { from { transform: scale(.92) translateY(10px); opacity: 0; } }
+  h1.logo { font-family: Bungee, Impact, sans-serif; font-size: clamp(48px, 11vw, 132px); line-height: .9; margin: 0; text-align: center; letter-spacing: 2px;
+    color: #fff; text-shadow: 4px 4px 0 var(--acc), -4px -4px 0 var(--acc2), 0 0 40px rgba(255,43,214,.6); animation: glitch 3s infinite; transform: skew(-6deg); }
+  @keyframes glitch { 0%, 92%, 100% { text-shadow: 4px 4px 0 var(--acc), -4px -4px 0 var(--acc2), 0 0 40px rgba(255,43,214,.6); }
+    94% { text-shadow: -6px 2px 0 var(--acc), 6px -2px 0 var(--acc2), 0 0 60px #fff; transform: skew(-6deg) translateX(4px); }
+    96% { text-shadow: 6px -3px 0 var(--acc), -6px 3px 0 var(--acc2); transform: skew(-6deg) translateX(-4px); } }
+  .tag { text-align: center; font-family: Bungee, sans-serif; color: var(--gold); letter-spacing: 8px; font-size: clamp(12px, 2vw, 18px); margin: 10px 0 34px; }
+  h2 { font-family: Bungee, Impact, sans-serif; font-size: clamp(28px, 5vw, 46px); margin: 0 0 18px; text-align: center; transform: skew(-6deg); text-shadow: 3px 3px 0 var(--acc); }
+  .menu-col { display: flex; flex-direction: column; gap: 12px; align-items: center; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  .btn { font-family: Bungee, sans-serif; font-size: 20px; letter-spacing: 2px; width: min(340px, 100%); padding: 14px 24px; border: 2px solid var(--line); background: linear-gradient(90deg, rgba(255,43,214,.15), rgba(58,215,255,.1));
+    transform: skew(-10deg); transition: transform .12s, box-shadow .12s, background .12s, border-color .12s; }
+  .btn:hover, .btn:focus-visible { transform: skew(-10deg) scale(1.06); border-color: var(--acc); background: linear-gradient(90deg, rgba(255,43,214,.5), rgba(58,215,255,.35)); box-shadow: 0 0 24px rgba(255,43,214,.6); outline: none; }
+  .btn.small { width: auto; font-size: 15px; padding: 10px 18px; }
+  .btn.go { background: linear-gradient(90deg, #ff2bd6, #ff9f1c); border-color: #fff; color: #fff; }
+  .row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 20px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); padding: 18px; border-radius: 4px; }
+  .cards { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+  .card { text-align: left; background: var(--panel); border: 2px solid var(--line); padding: 18px; display: flex; flex-direction: column; gap: 6px; transition: transform .12s, border-color .12s, box-shadow .12s; border-radius: 4px; }
+  .card:hover, .card:focus-visible, .card.sel { transform: translateY(-4px); border-color: var(--acc2); box-shadow: 0 8px 30px rgba(58,215,255,.3); outline: none; }
+  .card.mode b { font-family: Bungee, sans-serif; font-size: 26px; }
+  .card.mode .ico { font-size: 44px; }
+  .card small { color: var(--dim); font-size: 16px; }
+  .card em { color: var(--gold); font-style: normal; font-weight: 700; }
+  .card.map { padding: 8px; background: linear-gradient(160deg, var(--a), var(--b)); }
+  .card.map.sel { border-color: var(--r); box-shadow: 0 0 22px var(--r); }
+  .card.map canvas { width: 100%; height: auto; display: block; }
+  .card.map b { font-family: Bungee, sans-serif; font-size: 14px; text-shadow: 1px 1px 0 #000; }
+  .rand { aspect-ratio: 16/9; display: grid; place-items: center; font: 48px Bungee, sans-serif; }
+  .setup { display: grid; grid-template-columns: 1.3fr 1fr; gap: 16px; }
+  @media (max-width: 800px) { .setup { grid-template-columns: 1fr; } }
+  #mapCards { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+  h3 { font-family: Bungee, sans-serif; font-size: 15px; letter-spacing: 2px; color: var(--dim); margin: 0 0 10px; }
+  .slot { display: flex; gap: 8px; align-items: center; padding: 8px 10px; border-left: 4px solid var(--c); background: rgba(255,255,255,.04); margin-bottom: 6px; flex-wrap: wrap; }
+  .slot.off { opacity: .55; border-left-color: #444; }
+  .slot b { font-family: Bungee, sans-serif; width: 32px; }
+  .slot .pname { flex: 1; min-width: 80px; font-weight: 700; }
+  select, input[type=text], input[type=number] { font: inherit; font-weight: 700; background: #151328; color: var(--txt); border: 1px solid var(--line); padding: 6px 8px; border-radius: 3px; }
+  label.opt { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 6px 0; font-weight: 700; font-size: 17px; }
+  input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--acc); }
+  input[type=range] { accent-color: var(--acc); width: 180px; }
+  .custom { display: grid; grid-template-columns: 300px 1fr; gap: 16px; }
+  @media (max-width: 760px) { .custom { grid-template-columns: 1fr; } }
+  #preview { width: 100%; max-width: 300px; aspect-ratio: 300/360; background: radial-gradient(ellipse at 50% 80%, #1d1a3a, #0b0a18); border: 1px solid var(--line); border-radius: 4px; justify-self: center; }
+  .tabs { display: flex; gap: 6px; margin-bottom: 12px; }
+  .tab { font-family: Bungee, sans-serif; padding: 8px 14px; background: #151328; border: 2px solid var(--line); border-bottom: 4px solid var(--c); }
+  .tab.sel { background: var(--c); color: #000; }
+  .crow { display: grid; grid-template-columns: 110px 36px 1fr 36px; gap: 8px; align-items: center; margin: 6px 0; font-weight: 700; font-size: 17px; }
+  .crow b { text-align: center; text-transform: uppercase; letter-spacing: 1px; background: rgba(255,255,255,.05); padding: 6px; }
+  .crow button { background: #151328; border: 1px solid var(--line); padding: 6px; font-size: 14px; }
+  .crow button:hover, .crow button:focus-visible { background: var(--acc); outline: none; }
+  .pdesc { font-weight: 700; margin: 6px 0 10px; min-height: 22px; }
+  #swatches { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 12px; }
+  .sw { width: 30px; height: 30px; border: 2px solid rgba(255,255,255,.2); border-radius: 50%; }
+  .sw.sel, .sw:focus-visible { border-color: #fff; box-shadow: 0 0 0 3px var(--acc); outline: none; }
+  table { width: 100%; border-collapse: collapse; font-size: 18px; font-weight: 700; }
+  th, td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: center; }
+  td:first-child, th:first-child { text-align: left; }
+  kbd { font-family: inherit; font-weight: 700; background: #222036; border: 1px solid #444; border-bottom-width: 3px; padding: 1px 7px; border-radius: 3px; font-size: 14px; }
+  .ctl td { font-size: 16px; }
+  .hint { text-align: center; color: var(--dim); margin-top: 26px; font-weight: 700; letter-spacing: 1px; }
+  #netView { position: fixed; inset: 0; background: #000; z-index: 5; pointer-events: none; } /* clicks fall through to the canvas input listeners */
+  #netView.hidden { display: none; }
+  #netVideo { width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
+  #netOverlay { position: absolute; top: 40%; width: 100%; text-align: center; font: 28px Bungee, sans-serif; pointer-events: none; text-shadow: 2px 2px 0 #000; }
+  #netBar { pointer-events: auto; position: absolute; top: 8px; left: 8px; display: flex; gap: 10px; align-items: center; font-weight: 700; }
+  .code { font: 34px Bungee, sans-serif; color: var(--gold); letter-spacing: 6px; }
+  #netList { font-weight: 700; font-size: 18px; padding-left: 20px; }
+  #resTitle { font-size: clamp(34px, 7vw, 70px); }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="menu">
+  <section class="screen active" id="title">
+    <h1 class="logo">STICK<br>BRAWL</h1>
+    <div class="tag">STICKMAN MAYHEM</div>
+    <div class="menu-col">
+      <button class="btn go" data-go="modes">PLAY</button>
+      <button class="btn" data-go="online">PLAY ONLINE</button>
+      <button class="btn" data-go="custom">CUSTOMIZE</button>
+      <button class="btn" data-go="settings">SETTINGS</button>
+      <button class="btn" data-go="controls">CONTROLS</button>
+      <button class="btn exit-btn" data-act="exit" hidden>QUIT GAME</button>
+    </div>
+    <p class="hint"><span id="verTag"></span> Local + online multiplayer up to 4 players · keyboard, mouse &amp; gamepads</p>
+  </section>
+
+  <section class="screen" id="modes">
+    <h2>SELECT MODE</h2>
+    <div class="cards" id="modeCards"></div>
+    <div class="row"><button class="btn small" data-go="title">◀ BACK</button></div>
+  </section>
+
+  <section class="screen" id="setup">
+    <h2 id="setupMode">BRAWL</h2>
+    <div class="setup">
+      <div class="panel"><h3>ARENA</h3><div class="cards" id="mapCards"></div></div>
+      <div class="panel">
+        <h3>FIGHTERS</h3><div id="slots"></div>
+        <p id="padInfo" style="color:var(--dim);margin:4px 0 12px"></p>
+        <h3>RULES</h3>
+        <div id="optBrawl">
+          <label class="opt">Lives <input type="number" id="optLives" min="1" max="9" value="3"></label>
+          <label class="opt">Extra bots <input type="number" id="optExtra" min="0" max="6" value="0"></label>
+          <label class="opt">Teams (P1+P3 vs P2+P4…) <input type="checkbox" id="optTeams"></label>
+        </div>
+        <label class="opt">Weapon drops <input type="checkbox" id="optWeapons" checked></label>
+        <label class="opt">Superpower orbs <input type="checkbox" id="optPowers" checked></label>
+      </div>
+    </div>
+    <div class="row"><button class="btn small" data-go="modes">◀ BACK</button><button class="btn go" data-act="start">FIGHT!</button></div>
+  </section>
+
+  <section class="screen" id="online">
+    <h2>PLAY ONLINE</h2>
+    <div class="setup">
+      <div class="panel">
+        <h3>HOST A GAME</h3>
+        <p style="color:var(--dim);font-weight:700;margin-top:0">You run the match; friends see your screen and control their own fighter. Keep this tab in front while playing.</p>
+        <button class="btn small go" data-act="host">HOST</button>
+        <p>Code: <b id="netCode" class="code">—</b></p>
+        <h3>JOINED</h3><ul id="netList"></ul>
+        <button class="btn small" data-go="modes">CHOOSE MODE ▶</button>
+      </div>
+      <div class="panel">
+        <h3>JOIN A FRIEND</h3>
+        <label class="opt">Code <input type="text" id="netJoinCode" maxlength="5" placeholder="ABCDE" autocomplete="off"></label>
+        <label class="opt">Controls <select id="netPad"><option value="kbm">Keyboard + Mouse</option><option value="pad">Gamepad</option></select></label>
+        <p style="color:var(--dim);font-weight:700">You play as your P1 look from Customize.</p>
+        <button class="btn small go" data-act="join">JOIN</button>
+      </div>
+    </div>
+    <p id="netStatus" class="hint"></p>
+    <div class="row"><button class="btn small" data-go="title">◀ BACK</button></div>
+  </section>
+
+  <section class="screen" id="custom">
+    <h2>CUSTOMIZE</h2>
+    <div class="tabs" id="ctabs"></div>
+    <div class="custom">
+      <canvas id="preview" width="300" height="360"></canvas>
+      <div class="panel">
+        <label class="opt">Name <input type="text" id="cname" maxlength="14"></label>
+        <h3 style="margin-top:8px">COLOR</h3><div id="swatches"></div>
+        <div id="crows"></div>
+        <label class="opt">Line thickness <input type="range" id="cthick" min="2" max="7" step="0.5"></label>
+        <div class="row" style="justify-content:flex-start;margin-top:8px"><button class="btn small" data-act="random">🎲 RANDOMIZE</button></div>
+      </div>
+    </div>
+    <div class="row"><button class="btn small" data-go="title">◀ BACK</button></div>
+  </section>
+
+  <section class="screen" id="settings">
+    <h2>SETTINGS</h2>
+    <div class="panel" style="max-width:520px;margin:0 auto">
+      <label class="opt">Music volume <input type="range" id="s_music" min="0" max="1" step="0.05"></label>
+      <label class="opt">Effects volume <input type="range" id="s_sfx" min="0" max="1" step="0.05"></label>
+      <label class="opt">Screen shake <input type="checkbox" id="s_shake"></label>
+      <label class="opt">Red blood (off = body-colored ink) <input type="checkbox" id="s_blood"></label>
+      <label class="opt">Floor splats &amp; scorch marks <input type="checkbox" id="s_decals"></label>
+      <label class="opt">High particle quality <input type="checkbox" id="s_quality"></label>
+    </div>
+    <div class="row"><button class="btn small" data-go="title">◀ BACK</button></div>
+  </section>
+
+  <section class="screen" id="controls">
+    <h2>CONTROLS</h2>
+    <div class="panel" style="overflow-x:auto">
+      <table class="ctl">
+        <tr><th>Action</th><th>Keyboard + Mouse</th><th>Keyboard Left</th><th>Keyboard Right</th><th>Gamepad</th></tr>
+        <tr><td>Move</td><td><kbd>WASD</kbd></td><td><kbd>WASD</kbd></td><td><kbd>Arrows</kbd></td><td>Left stick / D-pad</td></tr>
+        <tr><td>Aim</td><td>Mouse</td><td>Auto-aim</td><td>Auto-aim</td><td>Right stick (or auto)</td></tr>
+        <tr><td>Attack / shoot</td><td>Left click / <kbd>F</kbd></td><td><kbd>F</kbd></td><td><kbd>K</kbd> / <kbd>Num1</kbd></td><td>RT / RB / X</td></tr>
+        <tr><td>Superpower</td><td>Right click / <kbd>Q</kbd></td><td><kbd>G</kbd></td><td><kbd>L</kbd> / <kbd>Num2</kbd></td><td>LT / LB</td></tr>
+        <tr><td>Jump</td><td><kbd>Space</kbd></td><td><kbd>Space</kbd></td><td><kbd>I</kbd> / <kbd>Num0</kbd></td><td>A</td></tr>
+        <tr><td>Dash (i-frames)</td><td><kbd>Shift</kbd></td><td><kbd>Shift</kbd></td><td><kbd>J</kbd> / <kbd>Num3</kbd></td><td>B</td></tr>
+        <tr><td>Pick up / throw weapon</td><td><kbd>E</kbd></td><td><kbd>E</kbd></td><td><kbd>U</kbd> / <kbd>Num5</kbd></td><td>Y</td></tr>
+        <tr><td>Pause</td><td colspan="3"><kbd>Esc</kbd></td><td>Start</td></tr>
+      </table>
+      <p style="color:var(--dim);font-weight:700">Knock enemies off the floating arena for a RING OUT. Katanas, bats, pans and sabers swat bullets back. Grab glowing superpower orbs that drop into the arena: anyone can take them, they recharge after use and you lose them when you die.</p>
+    </div>
+    <div class="row"><button class="btn small" data-go="title">◀ BACK</button></div>
+  </section>
+
+  <section class="screen" id="pause">
+    <h2>PAUSED</h2>
+    <div class="menu-col">
+      <button class="btn" data-act="resume">RESUME</button>
+      <button class="btn" data-act="restart">RESTART</button>
+      <button class="btn" data-act="quit">QUIT TO MENU</button>
+      <button class="btn exit-btn" data-act="exit" hidden>QUIT GAME</button>
+    </div>
+  </section>
+
+  <section class="screen" id="results">
+    <h2 id="resTitle">WINNER</h2>
+    <p id="resSub" style="text-align:center;font-size:22px;font-weight:700;color:var(--gold);margin-top:-8px"></p>
+    <div class="panel" style="max-width:640px;margin:0 auto"><table id="resTable"></table></div>
+    <div class="row"><button class="btn go" data-act="rematch">REMATCH</button><button class="btn" data-act="quit">MAIN MENU</button></div>
+  </section>
+</div>
+<div id="netView" class="hidden">
+  <video id="netVideo" autoplay playsinline></video>
+  <div id="netOverlay"></div>
+  <div id="netBar"><span id="netWho"></span><button class="btn small" data-act="netleave">LEAVE</button></div>
+</div>
+<script src="vendor/peerjs/dist/peerjs.min.js?v=1.0.7"></script>
+<script src="js/data.js?v=1.0.7"></script>
+<script src="js/audio.js?v=1.0.7"></script>
+<script src="js/world.js?v=1.0.7"></script>
+<script src="js/stick.js?v=1.0.7"></script>
+<script src="js/game.js?v=1.0.7"></script>
+<script src="js/ai.js?v=1.0.7"></script>
+<script src="js/net.js?v=1.0.7"></script>
+<script src="js/ui.js?v=1.0.7"></script>
+</body>
+</html>
